@@ -4,10 +4,6 @@
 import numpy as np
 import pandas as pd
 
-# for visualizations
-import matplotlib.pyplot as plt
-import seaborn as sns
-
 # for sending requests to url and parsing
 import requests
 import json
