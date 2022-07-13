@@ -13,7 +13,7 @@ def request_data_kosis(url, target_period, index = ['C1', 'C1_NM'], columns = 'I
     This function is for request data based on given URL
     -----
     input:
-        url(string): URL for requesting data 
+        url(string): the URL for requesting data 
         target_period(string): infomation about time that we want to request the data
         index (list): usually C1 (region code) and C1_NM (region Name)
         columns (string): a variable that we want to use as columns ( e.g) ITM_NM, C3, etc.)
@@ -34,6 +34,43 @@ def request_data_kosis(url, target_period, index = ['C1', 'C1_NM'], columns = 'I
 
     return df_given_data
 
+def request_data_libsta(url, map_match_func, map_match_dict):
+    '''
+    This function is for request data based on given URL of the National Library Statistics System
+    -----
+    input:
+        url (string): 
+        target_period (int):  infomation about time that we want to request the data
+    -----
+    output:
+        df_given_data (pd.DataFrame): A table that parsed as pandas.DataFrame based on a response from the given URL
+    -----
+    '''
+    list_lib_type = ['LIBTYPE000001',
+         'LIBTYPE000002001',
+         'LIBTYPE000002002',
+         'LIBTYPE000002003',
+         'LIBTYPE000002004',
+         'LIBTYPE000002007'];
+    
+    list_df = []
+    for lib_type in list_lib_type:
+        response = requests.get(url.format(2020,lib_type,str(1),str(100)))
+        total_count = json.loads(response.text)['result']['count']
+
+        for page in range(1, (total_count//100)+2):
+            response = requests.get(url.format(2020,lib_type,str(page),str(100)))
+            df_tmp = pd.DataFrame(json.loads(response.text)['result']['list'])
+            list_df.append(df_tmp)
+
+    df_given_data = pd.concat(list_df, ignore_index = False)
+    df_given_data['localNm'] = df_given_data['addr'].apply(lambda x: x.split()[0])
+    df_given_data['localNm'] = df_given_data['localNm'].apply(lambda x: map_hl(x,dict_hl_name))
+    df_npl_by_region = df_given_data.groupby(by='localNm', as_index = False).count().iloc[:,:2]
+    df_npl_by_region.columns = ['C1_NM', 'npl']
+
+    return df_npl_by_region
+
 dict_hl_name = {
     '서울특별시' : ['서울', '서울시', '서울특별시'],
     '부산광역시' : ['부산', '부산시', '부산광역시'],
@@ -51,7 +88,7 @@ dict_hl_name = {
     '전라남도' : ['전남', '전라남도'],
     '경상북도' : ['경북', '경상북도'],	
     '경상남도' : ['경남', '경상남도'],	
-    '제주특별자치도' : ['제주']
+    '제주특별자치도' : ['제주', '제주특별자치도']
 }
 
 def map_hl(city, dictionary):
